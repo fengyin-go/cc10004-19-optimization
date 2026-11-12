@@ -28,6 +28,14 @@ class EntryPayload(BaseModel):
     remark: str | None = None
 
 
+class BindSourcePayload(BaseModel):
+    """数据集绑定来源连接：可直接指定候选 id，也可走历史名称解析。"""
+
+    source_id: int | None = None
+    source_name: str | None = None
+    confirmed: bool = False
+
+
 
 class QueryEntry(BaseModel):
     """查询语句明细结构。"""

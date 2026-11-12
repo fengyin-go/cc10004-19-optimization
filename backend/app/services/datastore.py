@@ -18,14 +18,30 @@ class DatastoreService:
         *,
         keyword: str | None = None,
         status: str | None = None,
+        dataset_no: str | None = None,
+        dataset_name: str | None = None,
+        source_table: str | None = None,
         page: int = 1,
         size: int = 20,
     ) -> tuple[list[dict[str, Any]], int]:
-        rows = store.rows(MODULE)
+        rows = list(store.rows(MODULE))
         if keyword:
             rows = [row for row in rows if keyword in str(row.get("数据集编号", ""))]
+        if dataset_no:
+            rows = [row for row in rows if dataset_no in str(row.get("数据集编号", ""))]
+        if dataset_name:
+            rows = [row for row in rows if dataset_name in str(row.get("数据集名称", ""))]
+        if source_table:
+            # 来源表名同时覆盖历史只有名称的记录与绑定后的来源配置编号。
+            rows = [
+                row
+                for row in rows
+                if source_table in str(row.get("来源表名", ""))
+                or source_table in str(row.get("来源配置编号", ""))
+            ]
         if status:
             rows = [row for row in rows if row.get("status") == status]
+        rows.sort(key=lambda row: int(row.get("id", 0)))
         total = len(rows)
         start = max(page - 1, 0) * size
         return rows[start:start + size], total

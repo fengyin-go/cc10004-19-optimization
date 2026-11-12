@@ -18,14 +18,34 @@ class SourceService:
         *,
         keyword: str | None = None,
         status: str | None = None,
+        config_no: str | None = None,
+        conn_type: str | None = None,
+        address: str | None = None,
+        owner: str | None = None,
         page: int = 1,
         size: int = 20,
     ) -> tuple[list[dict[str, Any]], int]:
-        rows = store.rows(MODULE)
+        """列表筛选：条件栏的配置编号/连接类型/接入地址都转成后端检索条件。
+
+        - 三个文本条件均为包含匹配且可组合；负责人精确匹配；
+        - keyword 保留给配置编号的旧口径，与 config_no 同时存在时取并集语义之外的交集，
+          即两者都要满足（实际前端只会发其中一个）。
+        """
+        rows = list(store.rows(MODULE))
         if keyword:
             rows = [row for row in rows if keyword in str(row.get("配置编号", ""))]
+        if config_no:
+            rows = [row for row in rows if config_no in str(row.get("配置编号", ""))]
+        if conn_type:
+            rows = [row for row in rows if conn_type in str(row.get("连接类型", ""))]
+        if address:
+            rows = [row for row in rows if address in str(row.get("接入地址", ""))]
+        if owner:
+            rows = [row for row in rows if str(row.get("负责人", "")) == owner]
         if status:
             rows = [row for row in rows if row.get("status") == status]
+        # id 稳定排序，保证筛选后翻页不重复、不漏条。
+        rows.sort(key=lambda row: int(row.get("id", 0)))
         total = len(rows)
         start = max(page - 1, 0) * size
         return rows[start:start + size], total
@@ -40,6 +60,10 @@ class SourceService:
         rows = store.rows(MODULE)
         entry = {"id": max((int(row.get("id", 0)) for row in rows), default=0) + 1}
         entry.update({field: values.get(field) for field in REQUIRED_FIELDS})
+        # 负责人等可选字段随登记一并保存，候选检索依赖它做身份裁决。
+        for optional in ("认证凭证", "连接池大小", "超时秒数", "重试上限", "负责人"):
+            if values.get(optional) not in (None, ""):
+                entry[optional] = values.get(optional)
         entry["status"] = STATUS_ORDER[0]
         entry["pending"] = True
         entry["abnormal"] = False

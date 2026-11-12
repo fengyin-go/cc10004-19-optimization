@@ -18,15 +18,28 @@ STATUSES = ["草稿", "待校验", "已连接", "已断开"]
 
 @router.get("", response_model=PageResult[dict])
 def list_entries(
-    keyword: str | None = Query(default=None, description="按配置编号检索"),
+    keyword: str | None = Query(default=None, description="按配置编号检索（旧口径）"),
     status: str | None = Query(default=None, description="草稿、待校验、已连接、已断开"),
+    config_no: str | None = Query(default=None, description="按配置编号模糊检索"),
+    conn_type: str | None = Query(default=None, description="按连接类型模糊检索"),
+    address: str | None = Query(default=None, description="按接入地址模糊检索"),
+    owner: str | None = Query(default=None, description="按负责人精确定位"),
     page: int = 1,
     size: int = 20,
 ) -> PageResult[dict]:
-    """按配置编号与状态过滤数据源接入列表；没有数据时返回空页，不报错。"""
+    """按条件栏字段与状态过滤数据源接入列表；没有数据时返回空页，不报错。"""
     if size > 200:
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
-    items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
+    items, total = service.list_entries(
+        keyword=keyword,
+        status=status,
+        config_no=config_no,
+        conn_type=conn_type,
+        address=address,
+        owner=owner,
+        page=page,
+        size=size,
+    )
     return PageResult(items=items, total=total, page=page, size=size)
 
 
